@@ -14,10 +14,3 @@ class Policy:
         raise NotImplementedError
 
 
-    def play_move(self,observation,player,mask) -> Tuple[Node,int]:
-        """ calls the do_search method and uses the information of the search
-            to choose an action to take.
-            returns the node and the number of the action 
-            it should return a node with the observation and player """
-
-        raise NotImplementedError
