@@ -154,9 +154,9 @@ class AbstractUnrollingMVR(Loss):
             total_actions.append(actions)
             current_states = next_encoded_states
         #swap the two first dimensions, so that the first refers to each node and the second the each unrolling step
-        reward_tensor = torch.transpose(torch.stack(predicted_rewards_list),0,1)
-        state_tensor = torch.transpose(torch.stack(predicted_states_list),0,1)
-        action_tensor = torch.transpose(torch.tensor(total_actions),0,1)
+        reward_tensor = torch.transpose(torch.stack(predicted_rewards_list),0,1).to(self.device)
+        state_tensor = torch.transpose(torch.stack(predicted_states_list),0,1).to(self.device)
+        action_tensor = torch.transpose(torch.tensor(total_actions),0,1).to(self.device)
         return reward_tensor, state_tensor, action_tensor
 
     def _unrolled_prediction(self,encoded_states):
