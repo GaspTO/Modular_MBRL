@@ -133,7 +133,8 @@ class AbstractUnrollingMVR(Loss):
         game_indexes = [node.get_idx_at_game() for node in nodes]
         observations = torch.tensor([games[n_idx].observations[game_indexes[n_idx]] for n_idx in range(len(nodes))],device=self.device)
 
-        current_states, = model.representation_query(observations,RepresentationOp.KEY) 
+        current_states, = model.representation_query(observations,RepresentationOp.KEY)
+        current_states = current_states.to(self.device)
         predicted_states_list = [current_states]
         predicted_rewards_list = []
         for delta_idx in range(unroll_steps):
@@ -147,6 +148,7 @@ class AbstractUnrollingMVR(Loss):
             if not state_grad_for_reward:
                 current_states = current_states.detach() 
             predicted_rewards, next_encoded_states = model.dynamic_query(current_states,actions,RewardOp.KEY,NextStateOp.KEY)
+            predicted_rewards = predicted_rewards.to(self.device)
             predicted_states_list.append(next_encoded_states)
             predicted_rewards_list.append(predicted_rewards)
             total_actions.append(actions)
