@@ -25,7 +25,8 @@ class OnlineTDMVR(AbstractUnrollingMVR):
     encoded_state_fidelity = False, #SHOULD OUR STATES MIMICK THE REAL OBSERVATIONS?
     coef_loss_state = 1,
     loss_fun_state=torch.nn.functional.mse_loss,
-    average_loss=True):
+    average_loss=True,
+    device = None):
         super().__init__(
             model=model,
             unroll_steps=unroll_steps,
@@ -39,7 +40,8 @@ class OnlineTDMVR(AbstractUnrollingMVR):
             encoded_state_fidelity=encoded_state_fidelity,
             coef_loss_state=coef_loss_state,
             loss_fun_state=loss_fun_state,
-            average_loss=average_loss)
+            average_loss=average_loss,
+            device = None)
         self.n_steps = n_steps
 
 
@@ -55,6 +57,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
             with torch.no_grad():
                 states, = self.model.representation_query(observations_to_estimate,RepresentationOp.KEY)
                 raw_values, = self.model.prediction_query(states,StateValueOp.KEY)
+                raw_values = raw_values.to(self.device)
 
         ''' Create target values based on rewards and bootstrapping steps '''
         target_values = []
@@ -83,7 +86,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
                         value -= reward * self.gamma_discount**i
                 target_values_per_node.append([value])
             target_values.append(target_values_per_node)
-        target_values = torch.tensor(target_values)
+        target_values = torch.tensor(target_values,device=self.device)
         assert raw_values_idx == len(raw_values)
         return target_values
 
@@ -101,7 +104,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
                 observations_to_estimate.append(obs)
                 current_index += 1
                 bootstrap_index = current_index + self.n_steps
-        return torch.tensor(observations_to_estimate)
+        return torch.tensor(observations_to_estimate,self.device)
 
 
     def __str__(self):

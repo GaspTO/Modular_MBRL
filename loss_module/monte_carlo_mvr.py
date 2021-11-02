@@ -17,7 +17,8 @@ class MonteCarloMVR(AbstractUnrollingMVR):
     encoded_state_fidelity = False,
     coef_loss_state = 1,
     loss_fun_state=torch.nn.functional.mse_loss,
-    average_loss=True):
+    average_loss=True,
+    device = None):
         super().__init__(model=model,
             unroll_steps=unroll_steps,
             gamma_discount=gamma_discount,
@@ -30,7 +31,8 @@ class MonteCarloMVR(AbstractUnrollingMVR):
             encoded_state_fidelity=encoded_state_fidelity,
             coef_loss_state=coef_loss_state,
             loss_fun_state=loss_fun_state,
-            average_loss=average_loss)
+            average_loss=average_loss,
+            device = device)
     
     def _get_target_values(self,nodes:list):
         return self.discounted_accumulated_rewards(nodes,self.unroll_steps,self.gamma_discount)
@@ -57,7 +59,7 @@ class MonteCarloMVR(AbstractUnrollingMVR):
                 accumulated_rewards_per_game = accumulated_rewards_per_game + [[0.0]]*(unroll_steps+1-len(accumulated_rewards_per_game))
             assert len(accumulated_rewards_per_game) == unroll_steps+1
             accumulated_rewards.append(accumulated_rewards_per_game)
-        return torch.tensor(accumulated_rewards)
+        return torch.tensor(accumulated_rewards,device=self.device)
 
 
     def __str__(self):

@@ -24,7 +24,8 @@ class AbstractUnrollingMVR(Loss):
     encoded_state_fidelity = False, #SHOULD OUR STATES MIMICK THE REAL OBSERVATIONS?
     coef_loss_state = 1,
     loss_fun_state=torch.nn.functional.mse_loss,
-    average_loss=True):
+    average_loss=True,
+    device = None):
         self.model = model
         ''' check if model has all the necessary operations '''
         assert isinstance(self.model,RewardOp) and \
@@ -44,6 +45,10 @@ class AbstractUnrollingMVR(Loss):
         self.coef_loss_state = coef_loss_state
         self.loss_fun_state = loss_fun_state
         self.average_loss = average_loss
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
 
     def get_loss(self,nodes:list,info={}):
         if not isinstance(nodes,list): nodes = [nodes]
@@ -54,7 +59,6 @@ class AbstractUnrollingMVR(Loss):
             loss = loss/len(nodes)
         return loss, info
 
-    #TODO, we can pass the loss of rewards and states to the super class.
     def _get_losses(self,nodes:list,info={}):
         """ returns 4 losses: reward, value, masks and state. The state loss is optional, only
         if we want the hidden state of our agent to mimick the real observations. if we want to update
@@ -127,7 +131,7 @@ class AbstractUnrollingMVR(Loss):
         total_actions = []
         games = [node.get_game() for node in nodes]
         game_indexes = [node.get_idx_at_game() for node in nodes]
-        observations = torch.tensor([games[n_idx].observations[game_indexes[n_idx]] for n_idx in range(len(nodes))])
+        observations = torch.tensor([games[n_idx].observations[game_indexes[n_idx]] for n_idx in range(len(nodes))],device=self.device)
 
         current_states, = model.representation_query(observations,RepresentationOp.KEY) 
         predicted_states_list = [current_states]
@@ -164,11 +168,15 @@ class AbstractUnrollingMVR(Loss):
         encoded_states1 = encoded_states[:,0:1,]
         flat_encoded_states1 = torch.flatten(encoded_states1,0,1)
         predicted_values_first, = model.prediction_query(flat_encoded_states1,StateValueOp.KEY)
+        predicted_values_first = predicted_values_first.to(self.device)
+        print("hey")
         predicted_values_first = predicted_values_first.view(batch,1,1) #! change last to -1
         ''' second values and masks'''
         encoded_states2 = encoded_states[:,1:] 
         flat_encoded_states2 = torch.flatten(encoded_states2,0,1)
         predicted_values_second, predicted_masks = model.prediction_query(flat_encoded_states2,StateValueOp.KEY,MaskOp.KEY)
+        predicted_values_second = predicted_values_second.to(self.device)
+        predicted_masks = predicted_masks.to(self.device)
         predicted_values_second = predicted_values_second.view(batch,steps-1,1)
         predicted_masks = predicted_masks.view(batch,steps-1,-1)
         predicted_values = torch.cat((predicted_values_first,predicted_values_second),dim=1) #! change last to -1
@@ -182,7 +190,7 @@ class AbstractUnrollingMVR(Loss):
             idx = node.get_idx_at_game()
             target_rewards = game.rewards[idx:idx+self.unroll_steps] + [0] * (self.unroll_steps-len(game.rewards[idx:idx+self.unroll_steps])) #fill rest with 0s
             target_rewards_list.append(target_rewards)
-        return torch.tensor(target_rewards_list).unsqueeze(2)
+        return torch.tensor(target_rewards_list,device=self.device).unsqueeze(2)
 
     ''' masks '''
     def _get_target_masks(self,nodes:list):
@@ -199,7 +207,7 @@ class AbstractUnrollingMVR(Loss):
                 if (idx + delta_idx) < len(game.nodes):
                     mask = game.nodes[idx + delta_idx].get_action_mask()
                 else:
-                    mask = torch.tensor([0]*game.action_size) #redundant
+                    mask = torch.tensor([0]*game.action_size,device=self.device) #redundant
                 masks.append(mask)
             total_masks.append(torch.stack(masks))
         return torch.stack(total_masks)
@@ -213,9 +221,9 @@ class AbstractUnrollingMVR(Loss):
             observations = []
             for delta_idx in range(0,self.unroll_steps+1): #starts at one because we do not need to learn the mask for the real observation
                 if (idx + delta_idx) < len(game.nodes):
-                    obs = torch.tensor(game.observations[idx + delta_idx])
+                    obs = torch.tensor(game.observations[idx + delta_idx],device=self.device)
                 else:
-                    obs = torch.tensor(game.observations[-1]) #! JUST THE LAST ONE WITH VALUE 0
+                    obs = torch.tensor(game.observations[-1],device=self.device) #! JUST THE LAST ONE WITH VALUE 0
                 observations.append(obs)
             total_observations.append(torch.stack(observations))
         return torch.stack(total_observations)

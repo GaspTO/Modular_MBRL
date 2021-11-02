@@ -19,7 +19,8 @@ class OfflineTDMVR(MonteCarloMVR):
     encoded_state_fidelity = False, #SHOULD OUR STATES MIMICK THE REAL OBSERVATIONS?
     coef_loss_state = 1,
     loss_fun_state=torch.nn.functional.mse_loss,
-    average_loss=True):
+    average_loss=True,
+    device = None):
         super().__init__(
             model=model,
             unroll_steps=unroll_steps,
@@ -33,7 +34,8 @@ class OfflineTDMVR(MonteCarloMVR):
             encoded_state_fidelity=encoded_state_fidelity,
             coef_loss_state=coef_loss_state,
             loss_fun_state=loss_fun_state,
-            average_loss=average_loss)
+            average_loss=average_loss,
+            device = device)
         self.n_steps = n_steps
 
     def _get_target_values(self,nodes:list):
@@ -69,7 +71,7 @@ class OfflineTDMVR(MonteCarloMVR):
                     assert value == 0
                     target_values.append(0)
             total_target_values.append(target_values)
-        return torch.tensor(total_target_values).unsqueeze(2)
+        return torch.tensor(total_target_values,device=self.device).unsqueeze(2)
     
 
     def __str__(self):
