@@ -11,14 +11,15 @@ def mlp(
     input_size,
     layer_sizes,
     output_size,
+    device,
     output_activation=torch.nn.Identity,
-    activation=torch.nn.ReLU,
+    activation=torch.nn.ReLU
 ):
     sizes = [input_size] + layer_sizes + [output_size]
     layers = []
     for i in range(len(sizes) - 1):
         act = activation if i < len(sizes) - 2 else output_activation
-        layers += [torch.nn.Linear(sizes[i], sizes[i + 1]), act()] 
+        layers += [torch.nn.Linear(sizes[i], sizes[i + 1],device=device), act()] 
     return torch.nn.Sequential(*layers)
 
 
@@ -41,9 +42,18 @@ class Disjoint_MLP(RepresentationOp,
         fc_value_layers:list = [100],
         fc_mask_layers:list = [100], #Set this to None fo default value of 1 in all mask
         bool_normalize_encoded_states = False,
-        optimizer = None
+        optimizer = None,
+        device = None
     ):
         super().__init__()
+
+        if device is None:
+            print("cpu")
+            self.device = torch.device("cpu")
+            #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+
         self.bool_normalize_encoded_states = bool_normalize_encoded_states
         if bool_normalize_encoded_states:
             raise ValueError("Normalization is still not available")
@@ -65,23 +75,24 @@ class Disjoint_MLP(RepresentationOp,
             total_input_nodes *= x
 
         ''' initial hidden state '''
-        self._representation_network = mlp(total_input_nodes,fc_representation_layers,self.encoding_size)
+        self._representation_network = mlp(total_input_nodes,fc_representation_layers,self.encoding_size,self.device)
         ''' next hidden state'''
-        self._dynamics_encoded_state_network = mlp(self.encoding_size + self.action_space_size,fc_dynamics_layers, self.encoding_size)
+        self._dynamics_encoded_state_network = mlp(self.encoding_size + self.action_space_size,fc_dynamics_layers, self.encoding_size,self.device)
         ''' reward '''
-        self._dynamics_reward_network = mlp(self.encoding_size + self.action_space_size, fc_reward_layers, 1)
+        self._dynamics_reward_network = mlp(self.encoding_size + self.action_space_size, fc_reward_layers, 1, self.device)
         ''' value '''
-        self._prediction_value_network = mlp(self.encoding_size, fc_value_layers, 1)
+        self._prediction_value_network = mlp(self.encoding_size, fc_value_layers, 1, self.device)
         ''' mask '''
         if fc_mask_layers is None:
             self._prediction_mask_network = None
         else:
-            self._prediction_mask_network = mlp(self.encoding_size, fc_mask_layers, action_space_size)
+            self._prediction_mask_network = mlp(self.encoding_size, fc_mask_layers, action_space_size, self.device)
 
     ''' Representation '''
     def representation_query(self, observations:torch.Tensor, *keys):
+        observations = observations.to(self.device)
         if isinstance(observations,np.ndarray):
-            observations = torch.tensor(observations)
+            observations = torch.tensor(observations,device=self.device)
         assert observations.shape[1:] == self.observation_shape
         observations = observations.view(observations.shape[0], -1).float()
         hidden_states = None
@@ -108,6 +119,7 @@ class Disjoint_MLP(RepresentationOp,
 
     ''' Prediction '''
     def prediction_query(self, states: torch.Tensor, *keys):
+        states = states.to(self.device)
         assert states.shape[1:] == self.encoding_shape
         ret_tuple = []
         for key in keys:
@@ -130,7 +142,7 @@ class Disjoint_MLP(RepresentationOp,
 
     def _prediction_mask(self,states:torch.Tensor):
         if self._prediction_mask_network is None:
-            return torch.ones((states.shape[0],self.action_space_size))
+            return torch.ones((states.shape[0],self.action_space_size),device=self.device)
         else:
             states = states.view(states.shape[0], -1)
             mask_logits =  self._prediction_mask_network(states)
@@ -138,6 +150,7 @@ class Disjoint_MLP(RepresentationOp,
 
     ''' Dynamic '''
     def dynamic_query(self,states:torch.Tensor,actions:List[list],*keys):
+        states = states.to(self.device)
         assert states.shape[1:] == self.encoding_shape
         ret_tuple = []
         for key in keys:
@@ -168,7 +181,7 @@ class Disjoint_MLP(RepresentationOp,
         encoded_states = encoded_states.view(encoded_states.shape[0], -1)
         input_vector = self._merge_dynamics_input(encoded_states,actions)
         if self._dynamics_reward_network is None:
-            next_rewards = torch.zeros(input_vector.shape[0])
+            next_rewards = torch.zeros(input_vector.shape[0],device=self.device)
         else:
             next_rewards = self._dynamics_reward_network(input_vector)
         return next_rewards
@@ -184,7 +197,7 @@ class Disjoint_MLP(RepresentationOp,
         input_vector = []
         for state_idx in range(len(actions)):
             for action in actions[state_idx]:
-                action_one_hot = torch.zeros(self.action_space_size).float()
+                action_one_hot = torch.zeros(self.action_space_size,device=self.device).float()
                 action_one_hot[action] = 1
                 x = torch.cat((states[state_idx],action_one_hot))
                 input_vector.append(x.unsqueeze_(0))
