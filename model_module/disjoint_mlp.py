@@ -40,11 +40,14 @@ class Disjoint_MLP(RepresentationOp,
         fc_reward_layers:list = [100],
         fc_value_layers:list = [100],
         fc_mask_layers:list = [100], #Set this to None fo default value of 1 in all mask
-        bool_normalize_encoded_states = True,
+        bool_normalize_encoded_states = False,
         optimizer = None
     ):
         super().__init__()
         self.bool_normalize_encoded_states = bool_normalize_encoded_states
+        if bool_normalize_encoded_states:
+            raise ValueError("Normalization is still not available")
+            
         self.action_space_size = action_space_size
         self.optimizer = optimizer
 

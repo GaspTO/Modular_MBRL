@@ -9,7 +9,7 @@ class Node:
             For e.g., in the monte-carlo tree search algorithm, this class is redifined so that get_value() returns
             an average value and not self._value. 
             
-            Also, don't use batch dimension in the tensors you put here"""
+            Also, don't use batch dimension in the tensors you put here """
         self._game:Game = None 
         self._idx_at_game:int = None
         self._action_mask:torch.Tensor = None
@@ -117,7 +117,7 @@ class Node:
 
     ''' Node Properties '''    
     #evaluation
-    def successor_value(self,action):
+    def successor_value(self,action): #this is Q(s,a)
         ''' value of successor for parent'''
         successor = self.get_child(action)
         if self.get_player() != successor.get_player():
