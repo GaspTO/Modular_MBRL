@@ -3,7 +3,7 @@ from gym.core import Env
 try:
     import gym_minigrid
 except ModuleNotFoundError:
-    raise ModuleNotFoundError('Please run "pip install gym_minigrid"')
+    raise ModuleNotFoundError('run "pip install gym_minigrid"')
 import numpy as np
 from environments.environment import Environment
 import random

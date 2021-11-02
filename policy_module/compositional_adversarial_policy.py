@@ -5,6 +5,7 @@ from typing import List, Tuple, Dict
 from copy import deepcopy
 
 
+''' Beta version '''
 class CompositionalAdversarialPolicy(SimplePolicy):
     def __init__(self,environment,policy1,policy2,reduction='successors',debug=False):
         super().__init__(environment,None,reduction,debug)
