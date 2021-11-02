@@ -5,8 +5,8 @@ from model_module.query_operations.next_state_op import NextStateOp
 from model_module.query_operations.state_value_op import StateValueOp
 from model_module.query_operations.representation_op import RepresentationOp
 from model_module.query_operations.mask_op import MaskOp
-
 from math import sqrt, log
+import numpy as np
 import torch 
 
 
@@ -19,17 +19,20 @@ class UCBBestFirstMinimax(AbstractBestFirstSearch):
     num_of_players,
     num_iterations,
     search_expl,
-    invalid_penalty):
-        super().__init__(model)
+    invalid_penalty,
+    device = None):
+        super().__init__(model,device)
         self.action_size = action_size
         self.num_of_players = num_of_players
         self.num_iterations = num_iterations
         self.search_expl = search_expl
         self.invalid_penalty = invalid_penalty
+        
 
     def plan(self,observation,player,mask):
         with torch.no_grad():
-            encoded_state, = self.model.representation_query(torch.tensor([observation]),RepresentationOp.KEY)
+            encoded_state, = self.model.representation_query(torch.tensor(np.expand_dims(observation, axis=0)),RepresentationOp.KEY)
+            encoded_state = encoded_state.to(self.device)
         node = BestFirstNode()
         node.set_player(player).set_encoded_state(encoded_state[0]).set_action_mask(mask)
         for i in range(self.num_iterations):
@@ -62,12 +65,16 @@ class UCBBestFirstMinimax(AbstractBestFirstSearch):
         actions = list(range(self.action_size))
         with torch.no_grad():
             rewards, next_encoded_states = self.model.dynamic_query(node.get_encoded_state().unsqueeze(0),[actions],RewardOp.KEY,NextStateOp.KEY)
+            rewards = rewards.to(self.device)
+            next_encoded_states = next_encoded_states.to(self.device)
             if node.get_action_mask() is None:
                 mask, = self.model.prediction_query(node.get_encoded_state().unsqueeze(0),MaskOp.KEY)
+                mask = mask.to(self.device)
                 node.set_action_mask(mask[0]) 
             else:
                 assert node.get_parent() is None
             values, = self.model.prediction_query(next_encoded_states,StateValueOp.KEY)
+            values = values.to(self.device)
 
         for idx in range(len(actions)):
             action = actions[idx]

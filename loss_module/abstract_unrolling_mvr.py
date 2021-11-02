@@ -49,6 +49,7 @@ class AbstractUnrollingMVR(Loss):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
+        print("LOSS USING:"+str(self.device))
 
     def get_loss(self,nodes:list,info={}):
         if not isinstance(nodes,list): nodes = [nodes]
@@ -85,7 +86,7 @@ class AbstractUnrollingMVR(Loss):
         if self.encoded_state_fidelity:
             loss_state_per_node = torch.stack([self.loss_fun_state(predicted_states[i],target_states[i]) for i in range(len(nodes))]) #!
         else:
-            loss_state_per_node = torch.zeros((len(nodes)))
+            loss_state_per_node = torch.zeros((len(nodes))).to(self.device)
             assert loss_state_per_node.shape == loss_mask_per_node.shape
 
         total_loss_per_node = loss_mask_per_node + loss_reward_per_node + loss_value_per_node + loss_state_per_node
@@ -149,6 +150,7 @@ class AbstractUnrollingMVR(Loss):
                 current_states = current_states.detach() 
             predicted_rewards, next_encoded_states = model.dynamic_query(current_states,actions,RewardOp.KEY,NextStateOp.KEY)
             predicted_rewards = predicted_rewards.to(self.device)
+            next_encoded_states = next_encoded_states.to(self.device)
             predicted_states_list.append(next_encoded_states)
             predicted_rewards_list.append(predicted_rewards)
             total_actions.append(actions)
@@ -171,7 +173,6 @@ class AbstractUnrollingMVR(Loss):
         flat_encoded_states1 = torch.flatten(encoded_states1,0,1)
         predicted_values_first, = model.prediction_query(flat_encoded_states1,StateValueOp.KEY)
         predicted_values_first = predicted_values_first.to(self.device)
-        print("hey")
         predicted_values_first = predicted_values_first.view(batch,1,1) #! change last to -1
         ''' second values and masks'''
         encoded_states2 = encoded_states[:,1:] 
@@ -207,7 +208,7 @@ class AbstractUnrollingMVR(Loss):
             masks = []
             for delta_idx in range(1,self.unroll_steps+1): #starts at one because we do not need to learn the mask for the real observation
                 if (idx + delta_idx) < len(game.nodes):
-                    mask = game.nodes[idx + delta_idx].get_action_mask()
+                    mask = game.nodes[idx + delta_idx].get_action_mask().to(self.device)
                 else:
                     mask = torch.tensor([0]*game.action_size,device=self.device) #redundant
                 masks.append(mask)

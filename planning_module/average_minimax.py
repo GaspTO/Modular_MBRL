@@ -6,13 +6,15 @@ class AverageMinimax(Minimax):
     action_size,
     num_of_players,
     max_depth,
-    invalid_penalty):
+    invalid_penalty,
+    device=None):
         super().__init__(
             model=model,
             action_size=action_size,
             num_of_players=num_of_players,
             max_depth=max_depth,
-            invalid_penalty=invalid_penalty)
+            invalid_penalty=invalid_penalty,
+            device=device)
         
     def _update_node(self,node):
         value = self._get_children_average_successor_value(node)

@@ -41,7 +41,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
             coef_loss_state=coef_loss_state,
             loss_fun_state=loss_fun_state,
             average_loss=average_loss,
-            device = None)
+            device = device)
         self.n_steps = n_steps
 
 
@@ -56,6 +56,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
         if len(observations_to_estimate) > 0:
             with torch.no_grad():
                 states, = self.model.representation_query(observations_to_estimate,RepresentationOp.KEY)
+                states = states.to(self.device)
                 raw_values, = self.model.prediction_query(states,StateValueOp.KEY)
                 raw_values = raw_values.to(self.device)
 
@@ -71,7 +72,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
                 
                 if bootstrap_index < (len(game.nodes)-idx): #bootstrapped value
                     raw_value = raw_values[raw_values_idx]
-                    assert (torch.from_numpy(game.observations[idx+bootstrap_index])  == observations_to_estimate[raw_values_idx]).all()
+                    assert (torch.from_numpy(game.observations[idx+bootstrap_index]).to(self.device) == observations_to_estimate[raw_values_idx]).all()
                     raw_values_idx += 1
                     value = raw_value * self.gamma_discount**self.n_steps
                     if game.players[idx+current_index] != game.players[idx+bootstrap_index]:
@@ -104,7 +105,7 @@ class OnlineTDMVR(AbstractUnrollingMVR):
                 observations_to_estimate.append(obs)
                 current_index += 1
                 bootstrap_index = current_index + self.n_steps
-        return torch.tensor(observations_to_estimate,self.device)
+        return torch.tensor(observations_to_estimate,device=self.device)
 
 
     def __str__(self):

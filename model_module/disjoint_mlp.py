@@ -19,7 +19,7 @@ def mlp(
     layers = []
     for i in range(len(sizes) - 1):
         act = activation if i < len(sizes) - 2 else output_activation
-        layers += [torch.nn.Linear(sizes[i], sizes[i + 1],device=device), act()] 
+        layers += [torch.nn.Linear(sizes[i], sizes[i + 1]).to(device), act()] 
     return torch.nn.Sequential(*layers)
 
 
@@ -48,11 +48,10 @@ class Disjoint_MLP(RepresentationOp,
         super().__init__()
 
         if device is None:
-            print("cpu")
-            self.device = torch.device("cpu")
-            #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
+        print("Model is using "+str(self.device)+ " device")
 
         self.bool_normalize_encoded_states = bool_normalize_encoded_states
         if bool_normalize_encoded_states:

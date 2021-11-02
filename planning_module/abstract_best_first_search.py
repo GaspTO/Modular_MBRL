@@ -1,9 +1,15 @@
 from planning_module.planning import Planning
 from math import sqrt, log
+import torch
 
 class AbstractBestFirstSearch(Planning):
-    def __init__(self,model):
+    def __init__(self,model,device=None):
         super().__init__(model)
+        if device is None:
+            self.device = torch.device("cpu") #we do not do operations in this algorithm, so just keep it on cpu
+        else:
+            self.device = device
+        print("Best First Search is using "+str(self.device)+ " device")
 
     '''
         Node value methods

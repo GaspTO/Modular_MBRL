@@ -17,22 +17,26 @@ class Minimax(AbstractDepthFirstSearch):
     num_of_players,
     max_depth,
     invalid_penalty,
-    debug=False):
+    device = None):
         super().__init__(model)
         self.max_depth = max_depth
         self.action_size = action_size
         self.num_of_players = num_of_players
         self.model = model
         self.invalid_penalty = invalid_penalty
-        self.debug = debug
+        if device is None:
+            self.device = torch.device("cpu") #we do not do operations in this algorithm, so just keep it on cpu
+        else:
+            self.device = device
+        print("Minimax is using "+str(self.device)+ " device")
      
     def plan(self,observation,player,mask):
         with torch.no_grad():
-            encoded_state, = self.model.representation_query(torch.tensor([observation]),RepresentationOp.KEY)
+            encoded_state, = self.model.representation_query(torch.tensor(np.expand_dims(observation, axis=0)),RepresentationOp.KEY)
+            encoded_state = encoded_state.to(self.device)
         node = Node()
         node.set_player(player).set_encoded_state(encoded_state[0]).set_action_mask(mask)
-        self._expand_minimax_tree(node)
-        if self.debug: print(self._transverse(node))
+        self._expand_minimax_tree(node) 
         return node
 
     '''
@@ -63,7 +67,7 @@ class Minimax(AbstractDepthFirstSearch):
     
     def _get_best_node(self,node): 
         best_masked_value,best_value, best_action, best_child = float("-inf"),None,None,None
-        mask = node.get_action_mask().numpy()
+        mask = node.get_action_mask()
         for action,child in node.get_children().items():
             valid = mask[action]
             raw_child_value_to_parent = node.successor_value(action)
@@ -85,15 +89,19 @@ class Minimax(AbstractDepthFirstSearch):
         actions = [list(range(self.action_size))]* len(nodes)
         with torch.no_grad():
             rewards, next_encoded_states = self.model.dynamic_query(encoded_states,actions,RewardOp.KEY,NextStateOp.KEY)
+            rewards = rewards.to(self.device)
+            next_encoded_states = next_encoded_states.to(self.device)
 
         if estimate:
             with torch.no_grad():
                 values, = self.model.prediction_query(next_encoded_states,StateValueOp.KEY)
-                mask = torch.zeros((next_encoded_states.shape[0],self.action_size))  #shouldn't matter
+                values = values.to(self.device)
+                mask = torch.zeros(next_encoded_states.shape[0],self.action_size).to(self.device)  #shouldn't matter
         else:
-            values = torch.ones(rewards.shape) * float("Nan")
+            values = torch.ones(rewards.shape).to(self.device) * float("Nan")
             with torch.no_grad():
                 mask, = self.model.prediction_query(next_encoded_states,MaskOp.KEY) 
+                mask = mask.to(self.device)
 
         flat_idx = 0
         for st_idx in range(len(encoded_states)):
