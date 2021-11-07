@@ -3,7 +3,8 @@ This is a modular architecture for model based reinforcement learning using sear
 The components are separated, facilitating the creation of the agents and
 the extension of the existing components
 
-![Architecture](https://github.com/GaspTO/Modular_MBRL/docs/architecture.png)
+![Architecture](https://github.com/GaspTO/Modular_MBRL/blob/main/docs/architecture.png)
+
 
 
 
