@@ -29,7 +29,7 @@ class AbstractBestFirstSearch(Planning):
     def _ucb_function(self,child,c):
         parent = child.get_parent()
         child_action = child.get_parent_action()
-        value_for_parent = parent.successor_value(child_action)
+        value_for_parent = parent.action_value(child_action)
         if c != 0:
             exploration = sqrt(log(parent.get_visits())/(child.get_visits()+ 1))
         else:

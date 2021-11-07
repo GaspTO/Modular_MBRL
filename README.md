@@ -6,6 +6,7 @@ the extension of the existing components
 ![Architecture](https://github.com/GaspTO/Modular_MBRL/blob/main/docs/architecture.png)
 
 
+The current implementation learns the hidden-states for planning and an action-mask.
 
 
 run test.py for an example: it will ask you to choose from different components

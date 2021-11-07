@@ -70,7 +70,7 @@ class Minimax(AbstractBreadthFirstSearch):
         mask = node.get_action_mask()
         for action,child in node.get_children().items():
             valid = mask[action]
-            raw_child_value_to_parent = node.successor_value(action)
+            raw_child_value_to_parent = node.action_value(action)
             masked_child_value_to_parent = self._value_after_mask(raw_child_value_to_parent,valid)
             if masked_child_value_to_parent > best_masked_value:
                 best_masked_value = masked_child_value_to_parent
@@ -130,9 +130,8 @@ class Minimax(AbstractBreadthFirstSearch):
             transition_string =  "|action: " + str(action) + " |valid_bit: " + str(round(valid,2))
             if node.get_parent() is not None:
                 parent_string = "|parent_reward:"+ str(round(node.get_parent_reward(),4)) +\
-                    " |masked_parent_value:" +str(round(node.get_parent().successor_value(node.get_parent_action())*valid,4)) +\
-                    " |raw_parent_value:" +str(round(node.get_parent().successor_value(node.get_parent_action()),4))    
-                #assert node.get_parent().successor_value(node.get_parent_action()) <= node.get_parent().get_value()
+                    " |masked_parent_value:" +str(round(node.get_parent().action_value(node.get_parent_action())*valid,4)) +\
+                    " |raw_parent_value:" +str(round(node.get_parent().action_value(node.get_parent_action()),4))    
             else:
                 parent_string = ""
             value_string =  "|value: " +str(round(node.get_value(),4)) + " ba:"+str(node.best_action)

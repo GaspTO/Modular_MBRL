@@ -22,7 +22,7 @@ class EpsilonGreedyValue(SimplePolicy):
         node = self.get_planning_algorithm().plan(observation,player,mask)
         legal_actions, = np.where(mask == 1)
         if random.random() >= self.get_epsilon():
-            best_action = max(legal_actions,key=lambda a:node.successor_value(a))
+            best_action = max(legal_actions,key=lambda a:node.action_value(a))
         else: 
             best_action = random.choice(legal_actions)
 

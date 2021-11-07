@@ -117,7 +117,7 @@ class Node:
 
     ''' Node Properties '''    
     #evaluation
-    def successor_value(self,action): #this is Q(s,a)
+    def action_value(self,action): #this is Q(s,a)
         ''' value of successor for parent'''
         successor = self.get_child(action)
         if self.get_player() != successor.get_player():

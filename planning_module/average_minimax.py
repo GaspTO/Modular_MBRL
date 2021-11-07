@@ -25,7 +25,7 @@ class AverageMinimax(Minimax):
         total_mask = 0.
         mask = node.get_action_mask()
         for child in node.get_children_nodes():
-            total_value += node.successor_value(child.get_parent_action()) * mask[child.get_parent_action()].item() 
+            total_value += node.action_value(child.get_parent_action()) * mask[child.get_parent_action()].item() 
             total_mask += mask[child.get_parent_action()].item()
         return total_value/total_mask if total_mask != 0. else 0.
 

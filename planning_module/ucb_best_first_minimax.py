@@ -53,7 +53,7 @@ class UCBBestFirstMinimax(AbstractBestFirstSearch):
     def _update_node(self,node):
         best_node = self._get_ucb_best_node(node,exploration=0)
         action = best_node.get_parent_action()
-        unmasked_value = node.successor_value(action)
+        unmasked_value = node.action_value(action)
         node.set_value(unmasked_value)
         node.increment_visits()
 
