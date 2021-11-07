@@ -1,4 +1,4 @@
-from planning_module.abstract_depth_first_search import AbstractDepthFirstSearch
+from planning_module.abstract_breadth_first_search import AbstractBreadthFirstSearch
 from model_module.query_operations.reward_op import RewardOp
 from model_module.query_operations.next_state_op import NextStateOp
 from model_module.query_operations.state_value_op import StateValueOp
@@ -10,7 +10,7 @@ import torch
 
 
 
-class Minimax(AbstractDepthFirstSearch):
+class Minimax(AbstractBreadthFirstSearch):
     def __init__(self,
     model,
     action_size,

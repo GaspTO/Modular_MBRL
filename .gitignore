@@ -1,1 +1,12 @@
+# Editors
+.vscode/
+.idea/
+
+# Byte-compiled / optimized / DLL files
+logs/
 __pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+
+

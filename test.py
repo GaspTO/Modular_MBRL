@@ -3,6 +3,7 @@ from environments.cart_pole import CartPole
 from environments.minigrid import Minigrid
 from environments.tictactoe import TicTacToe
 
+from planning_module.abstract_breadth_first_search import AbstractBreadthFirstSearch
 from planning_module.minimax import Minimax
 from planning_module.average_minimax import AverageMinimax
 from planning_module.ucb_best_first_minimax import UCBBestFirstMinimax
@@ -76,7 +77,6 @@ model = Disjoint_MLP(
 action_size = environment.get_action_size()
 num_of_players = environment.get_num_of_players()
 
-
 ''' planning '''
 planning = input("choose planning:\n 1 - minimax\n 2 - averaged minimax\n 3 - BFMMS\n 4 - MCTS\n")
 if planning == "1":
@@ -101,16 +101,18 @@ if policy == "1":
     print("Epsilon value greedy chosen")
     policy = EpsilonGreedyValue(environment,planning,epsilon=0.05,reduction='root')
 elif policy == "2":
+    if isinstance(planning,AbstractBreadthFirstSearch):
+        raise ValueError("A breadth first search algorithm can not be paired with a strategy that requires node visits")
     print("Epsilon visit greedy chosen")
     policy = EpsilonGreedyVisits(environment,planning,epsilon=0.05,reduction='root')
 elif policy == "3":
+    if isinstance(planning,AbstractBreadthFirstSearch):
+        raise ValueError("A breadth first search algorithm can not be paired with a strategy that requires node visits")
     print("Visit ration chosen")
     policy = VisitRatio(environment,planning,temperature=0.05,reduction='root')
 else:
     print("couldn't understand choice. Choosing Epsilon value greedy by default.")
     policy = EpsilonGreedyValue(environment,planning,epsilon=0.05,reduction='root')
-
-
 
 ''' loss '''
 loss_module = input("choose loss:\n 1 - Monte Carlo\n 2 - Offline TD\n 3 - Online TD\n")
@@ -165,7 +167,6 @@ for ep in range(episodes):
     else:
         storage.add(game.nodes)
         
-
     #! learn
     for lep in range(updates_per_episode):
         nodes = storage.sample(batch_size)
