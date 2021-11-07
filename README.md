@@ -8,7 +8,7 @@ the extension of the existing components
 
 The current implementation learns the hidden-states for planning and an action-mask. 
 
-READ MORE ABOUT THIS WORK IN: ![Paper](https://github.com/GaspTO/Modular_MBRL/blob/main/docs/paper.pdf)
+MORE ABOUT THIS: ![a link](https://github.com/GaspTO/Modular_MBRL/blob/main/docs/paper.pdf)
 
 
 to try it, run test.py: it will ask you to choose from different components
