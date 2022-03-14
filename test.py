@@ -2,6 +2,7 @@
 from environments.cart_pole import CartPole
 from environments.minigrid import Minigrid
 from environments.tictactoe import TicTacToe
+from environments.breakout import Breakout
 
 from planning_module.abstract_breadth_first_search import AbstractBreadthFirstSearch
 from planning_module.minimax import Minimax
@@ -41,7 +42,7 @@ now = datetime.datetime.now()
 time_str = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 ''' environment '''
-environment = input("choose environment:\n 1 - cartpole\n 2 - minigrid\n 3 - tictactoe\n")
+environment = input("choose environment:\n 1 - cartpole\n 2 - minigrid\n 3 - tictactoe\n 4 - breakout\n")
 if environment == "1":
     print("Cartpole chosen")
     environment = CartPole(500)
@@ -51,6 +52,9 @@ elif environment == "2":
 elif environment == "3":
     print("Tictactoe chosen")
     environment = TicTacToe(self_play=False)
+elif environment == "4":
+    print("Breakout chosen")
+    environment = Breakout()
 else:
     print("couldn't understand choice. Choosing cartpole by default.")
     environment = CartPole(500)
@@ -64,12 +68,12 @@ writer = SummaryWriter(log_dir="logs/runs/"+str(time_str)+ "_" + str(experiment_
 model = Disjoint_MLP(
     observation_shape = environment.get_input_shape(),
     action_space_size = environment.get_action_size(),
-    encoding_shape = (8,),
-    fc_reward_layers = [300],
-    fc_value_layers =  [300], 
-    fc_representation_layers = [300],
-    fc_dynamics_layers = [300],
-    fc_mask_layers = [300],
+    encoding_shape = (80,),
+    fc_reward_layers = [1000,1000],
+    fc_value_layers =  [1000,1000], 
+    fc_representation_layers = [1000,1000],
+    fc_dynamics_layers = [1000,1000],
+    fc_mask_layers = [100],
     bool_normalize_encoded_states = False 
 )
 
