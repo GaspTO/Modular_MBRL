@@ -24,7 +24,7 @@ class Breakout(Environment):
         observation, reward, done, info = self.environment.step(action)
         #observation = cv2.resize(observation, (96, 96), interpolation=cv2.INTER_AREA)
         observation = np.asarray(observation, dtype="float32") / 255.0
-        #observation = np.moveaxis(observation, -1, 0)
+        observation = np.moveaxis(observation, -1, 0)
         assert self.get_input_shape() == observation.shape
         return observation, reward, done, info
         
@@ -38,7 +38,7 @@ class Breakout(Environment):
         observation = self.environment.reset()
         #observation = cv2.resize(observation, (96, 96), interpolation=cv2.INTER_AREA)
         observation = np.asarray(observation, dtype="float32") / 255.0
-        #observation = np.moveaxis(observation, -1, 0)
+        observation = np.moveaxis(observation, -1, 0)
         assert self.get_input_shape() == observation.shape
         return observation
 
@@ -52,7 +52,7 @@ class Breakout(Environment):
         return 4
 
     def get_input_shape(self):
-        return (210,160,3)
+        return (3,210,160)
 
     def get_legal_actions(self):
         """ In CartPole, the two actions are always legal """

@@ -30,6 +30,7 @@ class UCBBestFirstMinimax(AbstractBestFirstSearch):
         
 
     def plan(self,observation,player,mask):
+        self.model.eval()
         with torch.no_grad():
             encoded_state, = self.model.representation_query(torch.tensor(np.expand_dims(observation, axis=0)),RepresentationOp.KEY)
             encoded_state = encoded_state.to(self.device)

@@ -1,0 +1,3 @@
+1. Create a folder with specific networks (cnn, mlp...) or functions to create specific networks
+
+2. Abstract the Disjoint MLP and CNN to a Disjoint Container which is an abstract class that has a network for each of the operations

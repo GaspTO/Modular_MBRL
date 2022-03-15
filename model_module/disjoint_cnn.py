@@ -1,11 +1,13 @@
+from jwt import encode
 from model_module.query_operations.reward_op import RewardOp
 from model_module.query_operations.next_state_op import NextStateOp
 from model_module.query_operations.state_value_op import StateValueOp
 from model_module.query_operations.representation_op import RepresentationOp
 from model_module.query_operations.mask_op import MaskOp
 import torch
+import torch.nn as nn
 import numpy as np
-from typing import List
+from typing import List, Tuple
 
 def mlp(
     input_size,
@@ -23,9 +25,64 @@ def mlp(
     return torch.nn.Sequential(*layers)
 
 
+def cnn_dimensions(input_shape,kernel_sizes,num_channels=None):
+    dims = [input_shape[1],input_shape[2]]
+    for i in range(len(kernel_sizes)):
+        if isinstance(kernel_sizes[i],int):
+            kernel_sizes[i] = (kernel_sizes[i],kernel_sizes[i])
+        dims[0] = dims[0] - (kernel_sizes[i][0]-1)
+        dims[1] = dims[1] - (kernel_sizes[i][1]-1)
+    return ([num_channels,*dims])
 
 
-class Disjoint_MLP(RepresentationOp,
+
+def cnn(
+    input_shape:tuple,
+    num_channels:list,
+    kernel_sizes:List[Tuple],
+    mlp_layer_sizes:list,
+    device,
+    activation=torch.nn.ReLU,
+    output_activation=torch.nn.Identity,
+):
+    assert len(num_channels) == len(kernel_sizes)
+    assert len(input_shape) == 3
+    dims = cnn_dimensions(input_shape,kernel_sizes)
+    assert dims[1] > 0 and dims[2] > 0
+    
+
+    stride = 1 #assuming stride 1 for now
+    previous_channels = input_shape[0]
+    layers = []
+    number_of_layers = len(num_channels) + len(mlp_layer_sizes)
+    for layer_num in range(number_of_layers):
+        #Layers
+        if layer_num < len(num_channels):
+            layers += [nn.Conv2d(previous_channels, num_channels[layer_num], kernel_sizes[layer_num], stride=stride)]
+            previous_channels = num_channels[layer_num]
+        else:
+            mlp_layer_num = layer_num-len(num_channels)
+            layers += [torch.nn.Linear(mlp_layer_sizes[mlp_layer_num], mlp_layer_sizes[mlp_layer_num + 1]).to(device)]
+        #Activations
+        if layer_num < len(num_channels) + len(mlp_layer_sizes) - 1:
+            if layer_num < len(num_channels):
+                layers += [torch.nn.BatchNorm2d(num_channels[layer_num]),activation()]
+            else:
+                mlp_layer_num = layer_num-len(num_channels)
+                layers += [torch.nn.BatchNorm1d(mlp_layer_sizes[mlp_layer_num]),activation()]
+        else:
+            layers += [output_activation()]
+    return torch.nn.Sequential(*layers)
+
+#example model = cnn((1,10,10),[100,300,500],[3,3,3],[],torch.device("cpu"))
+
+
+
+
+
+
+
+class Disjoint_CNN(RepresentationOp,
                    StateValueOp,
                    MaskOp,
                    RewardOp,
@@ -35,12 +92,6 @@ class Disjoint_MLP(RepresentationOp,
         self,
         observation_shape:tuple,
         action_space_size:int, 
-        encoding_shape:tuple = (8,), #hidden state shape DONT ADD A BATCH DIMENSION
-        fc_representation_layers:list = [100], #one hidden layer of 100 nodes. 2 hidden layers of 150 and 100 would be [150,100]
-        fc_dynamics_layers:list = [100],
-        fc_reward_layers:list = [100],
-        fc_value_layers:list = [100],
-        fc_mask_layers:list = [100], #Set this to None fo default value of 1 in all mask
         bool_normalize_encoded_states = False,
         optimizer = None,
         device = None
@@ -60,40 +111,35 @@ class Disjoint_MLP(RepresentationOp,
         self.action_space_size = action_space_size
         self.optimizer = optimizer
 
-        if isinstance(encoding_shape,int):
-            self.encoding_shape = (encoding_shape,)
-        else:
-            self.encoding_shape = encoding_shape
-        self.encoding_size = 1
-        for x in self.encoding_shape:
-            self.encoding_size *= x
-
         self.observation_shape = observation_shape
         total_input_nodes = 1
         for x in observation_shape:
             total_input_nodes *= x
 
-        ''' initial hidden state '''
-        self._representation_network = mlp(total_input_nodes,fc_representation_layers,self.encoding_size,self.device)
+
+        ''' Initialize Networks'''
+        encoding_channels = 1
+        kernels = [3,3,3]
+        self._representation_network = cnn(self.observation_shape,[100,300,encoding_channels],kernels,[],self.device)
+        self.encoding_shape = cnn_dimensions(self.observation_shape,kernels,encoding_channels)
+        self.encoding_nodes = np.array(self.encoding_shape).prod()
         ''' next hidden state'''
-        self._dynamics_encoded_state_network = mlp(self.encoding_size + self.action_space_size,fc_dynamics_layers, self.encoding_size,self.device)
+        self._dynamics_encoded_state_network = mlp(self.encoding_nodes + self.action_space_size,[],self.encoding_nodes,self.device)
         ''' reward '''
-        self._dynamics_reward_network = mlp(self.encoding_size + self.action_space_size, fc_reward_layers, 1, self.device)
+        self._dynamics_reward_network = mlp(self.encoding_nodes + self.action_space_size,[],1,self.device)
         ''' value '''
-        self._prediction_value_network = mlp(self.encoding_size, fc_value_layers, 1, self.device)
+        self._prediction_value_network = mlp(self.encoding_nodes,[],1,self.device)
         ''' mask '''
-        if fc_mask_layers is None:
-            self._prediction_mask_network = None
-        else:
-            self._prediction_mask_network = mlp(self.encoding_size, fc_mask_layers, action_space_size, self.device)
+        self._prediction_mask_network = mlp(self.encoding_nodes,[],action_space_size,self.device)
+
+        print("done")
 
     ''' Representation '''
     def representation_query(self, observations:torch.Tensor, *keys):
-        observations = observations.to(self.device)
+        observations = observations.to(self.device).float()
         if isinstance(observations,np.ndarray):
             observations = torch.tensor(observations,device=self.device)
         assert observations.shape[1:] == self.observation_shape
-        observations = observations.view(observations.shape[0], -1).float() #! this shouldn't be here
         hidden_states = None
         ret_tuple = [] 
         for key in keys:
@@ -111,7 +157,7 @@ class Disjoint_MLP(RepresentationOp,
 
     def _representation_state(self,observations:torch.Tensor):
         hidden_states = self._representation_network(observations)
-        assert len(hidden_states.shape) == 2
+        assert tuple(hidden_states.shape[1:]) == tuple(self.encoding_shape)
         hidden_states = hidden_states.view(hidden_states.shape[0],*self.encoding_shape)
         return hidden_states
 
@@ -119,7 +165,7 @@ class Disjoint_MLP(RepresentationOp,
     ''' Prediction '''
     def prediction_query(self, states: torch.Tensor, *keys):
         states = states.to(self.device)
-        assert states.shape[1:] == self.encoding_shape
+        assert tuple(states.shape[1:]) == tuple(self.encoding_shape)
         ret_tuple = []
         for key in keys:
             v = self._prediction_map(key,states)
@@ -144,13 +190,13 @@ class Disjoint_MLP(RepresentationOp,
             return torch.ones((states.shape[0],self.action_space_size),device=self.device)
         else:
             states = states.view(states.shape[0], -1)
-            mask_logits =  self._prediction_mask_network(states)
+            mask_logits = self._prediction_mask_network(states)
             return torch.sigmoid(mask_logits)
 
     ''' Dynamic '''
     def dynamic_query(self,states:torch.Tensor,actions:List[list],*keys):
         states = states.to(self.device)
-        assert states.shape[1:] == self.encoding_shape
+        assert tuple(states.shape[1:]) == tuple(self.encoding_shape)
         ret_tuple = []
         for key in keys:
             v = self._dynamic_map(key,states,actions)
@@ -194,7 +240,7 @@ class Disjoint_MLP(RepresentationOp,
         assert states.shape[0] == len(actions), "There needs to be a list of actions per encoded state"
         assert len(states.shape) >= 2, "enconded_states needs to have a batch dimension"
         input_vector = []
-        for state_idx in range(len(actions)):
+        for state_idx in range(states.shape[0]):
             for action in actions[state_idx]:
                 action_one_hot = torch.zeros(self.action_space_size,device=self.device).float()
                 action_one_hot[action] = 1
@@ -211,7 +257,6 @@ class Disjoint_MLP(RepresentationOp,
         return [self.optimizer]
 
     def get_schedulers(self)->list:
-        #self.schedule = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=0.9)
         self.schedulers = []
         return self.schedulers
 

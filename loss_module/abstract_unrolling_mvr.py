@@ -49,9 +49,10 @@ class AbstractUnrollingMVR(Loss):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
-        print("LOSS USING:"+str(self.device))
+        print("Loss class is using device: "+str(self.device))
 
     def get_loss(self,nodes:list,info={}):
+        self.model.train()
         if not isinstance(nodes,list): nodes = [nodes]
         loss_reward, loss_value, loss_mask, loss_state, info = self._get_losses(nodes,info)
         loss = loss_value + loss_reward + loss_mask + loss_state 

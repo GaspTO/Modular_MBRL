@@ -29,6 +29,7 @@ class UCBMonteCarloTreeSearch(AbstractBestFirstSearch):
         self.invalid_penalty = invalid_penalty
 
     def plan(self,observation,player,mask):
+        self.model.eval()
         self.player = player
         with torch.no_grad():
             encoded_state, = self.model.representation_query(torch.tensor(np.expand_dims(observation, axis=0)),RepresentationOp.KEY)

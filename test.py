@@ -23,6 +23,7 @@ from loss_module.offline_td_mvr import OfflineTDMVR
 from loss_module.online_td_mvr import OnlineTDMVR
 
 from model_module.disjoint_mlp import Disjoint_MLP
+from model_module.disjoint_cnn import Disjoint_CNN
 
 from torch.utils.tensorboard import SummaryWriter, writer
 from datetime import datetime
@@ -64,7 +65,7 @@ experiment_name = str(environment) + "_" + time_str
 writer = SummaryWriter(log_dir="logs/runs/"+str(time_str)+ "_" + str(experiment_name))
 
 
-
+'''
 model = Disjoint_MLP(
     observation_shape = environment.get_input_shape(),
     action_space_size = environment.get_action_size(),
@@ -74,6 +75,13 @@ model = Disjoint_MLP(
     fc_representation_layers = [1000,1000],
     fc_dynamics_layers = [1000,1000],
     fc_mask_layers = [100],
+    bool_normalize_encoded_states = False 
+)
+'''
+
+model = Disjoint_CNN(
+    observation_shape = environment.get_input_shape(),
+    action_space_size = environment.get_action_size(),
     bool_normalize_encoded_states = False 
 )
 
