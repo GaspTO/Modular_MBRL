@@ -71,7 +71,7 @@ def cnn(
                 layers += [torch.nn.BatchNorm1d(mlp_layer_sizes[mlp_layer_num]),activation()]
         else:
             layers += [output_activation()]
-    return torch.nn.Sequential(*layers)
+    return torch.nn.Sequential(*layers).to(device)
 
 #example model = cnn((1,10,10),[100,300,500],[3,3,3],[],torch.device("cpu"))
 
