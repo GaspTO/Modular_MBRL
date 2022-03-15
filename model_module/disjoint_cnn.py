@@ -1,4 +1,3 @@
-from jwt import encode
 from model_module.query_operations.reward_op import RewardOp
 from model_module.query_operations.next_state_op import NextStateOp
 from model_module.query_operations.state_value_op import StateValueOp
